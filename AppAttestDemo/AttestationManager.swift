@@ -4,15 +4,15 @@ import Foundation
 final class AttestationManager: ChallengeProvider {
 
     private let backendService: BackendIntegrationService
-    private let appAttestProvider: AppAttestProvider
+    private let appAttest: AppAttestProtocol
     private var keyID: String?
 
     init(
-        appAttestProvider: AppAttestProvider = AppAttestService(),
+        appAttest: AppAttestProtocol = AppAttest(),
         backendService: BackendIntegrationService = BackendIntegrationService()
     ) {
         self.backendService = backendService
-        self.appAttestProvider = appAttestProvider
+        self.appAttest = appAttest
     }
 
     func challenge(for keyID: String) async throws -> Data {
@@ -21,7 +21,7 @@ final class AttestationManager: ChallengeProvider {
     }
 
     func submitAttestation() async throws {
-        let attestation = try await appAttestProvider
+        let attestation = try await appAttest
             .fetchAttestation(challengeProvider: self)
 
         guard let keyID else {
@@ -35,7 +35,7 @@ final class AttestationManager: ChallengeProvider {
             fatalError("Key must ready have been attested before it can be asserted")
         }
 
-        return try await appAttestProvider.fetchAssertion(
+        return try await appAttest.fetchAssertion(
             keyID: keyID,
             challenge: challenge(for: keyID)
         )

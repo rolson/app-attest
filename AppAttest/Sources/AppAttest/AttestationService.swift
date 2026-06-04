@@ -1,6 +1,6 @@
 import DeviceCheck
 
-protocol AttestationProvider {
+protocol AttestationService {
     var isSupported: Bool { get }
 
     func generateKey() async throws -> String
@@ -16,4 +16,4 @@ protocol AttestationProvider {
     ) async throws -> Data
 }
 
-extension DCAppAttestService: AttestationProvider { }
+extension DCAppAttestService: AttestationService { }

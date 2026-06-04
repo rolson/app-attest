@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-final class MockAttestationProvider: AttestationProvider {
+final class MockAttestationProvider: AttestationService {
     private let keyID = UUID().uuidString
     private(set) var didGenerateKey: Bool = false
     private(set) var didAttestKey: Bool = false

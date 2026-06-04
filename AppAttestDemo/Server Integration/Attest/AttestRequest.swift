@@ -33,3 +33,22 @@ extension URL {
         local.appending(path: "verify")
     }
 }
+
+extension URLRequest {
+    static func helloWorld() throws -> URLRequest {
+        var request = URLRequest(url: .helloWorld)
+        request.httpMethod = "GET"
+        request.setValue(
+            "application/json",
+            forHTTPHeaderField: "Content-Type"
+        )
+        return request
+    }
+
+}
+
+extension URL {
+    static var helloWorld: URL {
+        local.appending(path: "hello-world")
+    }
+}

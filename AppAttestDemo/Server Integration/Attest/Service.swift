@@ -7,6 +7,15 @@ extension BackendIntegrationService {
                 keyID: keyID,
                 attestation: attestation
             ))
-
+    }
+    
+    func helloWorld() async throws {
+        let (data, response) = try await session
+            .data(for: .helloWorld())
+        guard let response = response as? HTTPURLResponse,
+              response.statusCode == 200 else {
+            print("-- Unexpected response: \(response)")
+            throw URLError(.badServerResponse)
+        }
     }
 }

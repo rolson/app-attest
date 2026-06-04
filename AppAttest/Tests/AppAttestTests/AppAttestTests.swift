@@ -3,13 +3,13 @@ import Crypto
 import DeviceCheck
 import Testing
 
-struct AppAttestServiceTests {
+struct AppAttestTests {
     let attestationProvider = MockAttestationProvider()
     let challengeProvider = MockChallengeProvider()
-    let sut: AppAttestService
+    let sut: AppAttest
 
     init() {
-        sut = AppAttestService(
+        sut = AppAttest(
             attestationProvider: attestationProvider
         )
     }
@@ -18,7 +18,7 @@ struct AppAttestServiceTests {
     func unsupportedDevice() async {
         attestationProvider.isSupported = false
 
-        await #expect(throws: AppAttestServiceError.unsupportedDevice) {
+        await #expect(throws: AppAttestError.unsupportedDevice) {
             try await sut.fetchAttestation(challengeProvider: challengeProvider)
         }
     }

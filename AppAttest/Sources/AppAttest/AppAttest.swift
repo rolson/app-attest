@@ -1,34 +1,34 @@
 import Crypto
 import DeviceCheck
 
-enum AppAttestServiceError: Error {
+enum AppAttestError: Error {
     case unsupportedDevice
 }
 
-public final class AppAttestService: AppAttestProvider {
-    let attestationProvider: AttestationProvider
+public final class AppAttest: AppAttestProtocol {
+    let service: AttestationService
 
     init(
-        attestationProvider: AttestationProvider
+        service: AttestationService
     ) {
-        self.attestationProvider = attestationProvider
+        self.service = service
     }
 
     public convenience init() {
         self.init(
-            attestationProvider: DCAppAttestService.shared,
+            service: DCAppAttestService.shared,
         )
     }
 
     public func fetchAttestation(challengeProvider: ChallengeProvider) async throws -> Data {
-        guard attestationProvider.isSupported else {
-            throw AppAttestServiceError.unsupportedDevice
+        guard service.isSupported else {
+            throw AppAttestError.unsupportedDevice
         }
-        let keyID = try await attestationProvider.generateKey()
+        let keyID = try await service.generateKey()
         let challenge = try await challengeProvider.challenge(for: keyID)
         let clientDataHash = Data(SHA256.hash(data: challenge))
 
-        return try await attestationProvider.attestKey(
+        return try await service.attestKey(
             keyID,
             clientDataHash: clientDataHash
         )
@@ -36,7 +36,7 @@ public final class AppAttestService: AppAttestProvider {
 
     public func fetchAssertion(keyID: String, challenge: Data) async throws -> Data {
         let clientDataHash = Data(SHA256.hash(data: challenge))
-        return try await attestationProvider.generateAssertion(
+        return try await service.generateAssertion(
             keyID,
             clientDataHash: clientDataHash
         )
