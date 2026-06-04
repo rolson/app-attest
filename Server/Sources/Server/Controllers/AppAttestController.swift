@@ -1,3 +1,4 @@
+import AttestationDecoding
 import Fluent
 import Vapor
 
@@ -25,6 +26,12 @@ struct AppAttestController: RouteCollection {
             .decode(ChallengeRequest.self)
             .keyID
 
+        // Invalidate any previous challenge for this key to keep one active challenge.
+        let existingChallenges = try await req.db.query(IssuedChallenge.self)
+            .filter(\.$keyID, .equal, keyID)
+            .all()
+        try await existingChallenges.delete(force: true, on: req.db)
+
         // Create challenge for attestation
         let challenge = try IssuedChallengeDTO(
             keyID: keyID
@@ -39,21 +46,21 @@ struct AppAttestController: RouteCollection {
     @Sendable
     func verify(req: Request) async throws -> HTTPStatus {
         let request = try req.content.decode(AttestationRequest.self)
-        // verify this against challenge in database
         let challenges = try await req.db.query(IssuedChallenge.self)
             .filter(\.$keyID, .equal, request.keyID)
             .all()
 
-        // discard challenge it cannot be used again
-        try await challenges.delete(force: true, on: req.db)
+        guard let twoMinutesAgo = Calendar.current.date(byAdding: .minute, value: -2, to: Date()) else {
+            return .unauthorized
+        }
 
-        // Ensure challenge is unique and was created within the last two minutes
-        guard challenges.count == 1,
-              let challenge = challenges.first,
-              let twoMinutesAgo = Calendar.current.date(byAdding: .minute, value: -2, to: .now),
-              let creationDate = challenge.createdAt,
-              creationDate > twoMinutesAgo
-        else {
+        // Choose the newest fresh challenge and tolerate duplicate historical rows.
+        let currentChallenge = challenges
+            .filter { ($0.createdAt ?? .distantPast) > twoMinutesAgo }
+            .max(by: { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) })
+
+        guard let challenge = currentChallenge else {
+            try await challenges.delete(force: true, on: req.db)
             return .unauthorized
         }
 
@@ -62,13 +69,33 @@ struct AppAttestController: RouteCollection {
             try await validator.validate(
                 request, against: challenge.challenge
             )
+
+            // Persist the attested public key used for verifying future assertions.
+            let attestationObject = try AttestationDecoder().decode(data: request.attestation)
+            let publicKey = Data(
+                attestationObject.statement.certificateChain[0].publicKey.subjectPublicKeyInfoBytes
+            )
+
+            if let existing = try await req.db.query(AttestedKey.self)
+                .filter(\.$keyID, .equal, request.keyID)
+                .first() {
+                existing.publicKey = publicKey
+                existing.signCount = 0
+                try await existing.save(on: req.db)
+            } else {
+                let key = AttestedKey(
+                    keyID: request.keyID,
+                    publicKey: publicKey,
+                    signCount: 0
+                )
+                try await key.save(on: req.db)
+            }
         } catch {
             return .unauthorized
         }
 
-        // TODO: Store the Credential Cert and Receipt
-        // https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server#Store-the-public-key-and-receipt
-        // This are used for validating assertions later
+        // Discard all outstanding challenges for this key after verify attempt.
+        try await challenges.delete(force: true, on: req.db)
 
         return .ok
     }

@@ -2,7 +2,8 @@ import AttestationValidation
 import Fluent
 import Vapor
 
-let appID = "Z86DH46P79.uk.co.oliverbinns.app-attest"
+private let defaultAppID = "P8HGHS7JQ8.com.appattest.demo.1"
+private let appID = Environment.get("APP_ATTEST_APP_ID") ?? defaultAppID
 let environment: AttestationEnvironment = .development
 
 func routes(_ app: Application) throws {

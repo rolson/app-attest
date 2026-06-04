@@ -2,17 +2,26 @@ import AppAttest
 import Foundation
 
 final class AttestationManager: ChallengeProvider {
+    enum Error: Swift.Error {
+        case missingKeyID
+    }
 
     private let backendService: BackendIntegrationService
     private let appAttest: AppAttestProtocol
-    private var keyID: String?
+    private static let keyIDStorageKey = "appattest.keyID"
+    private var keyID: String? {
+        didSet {
+            UserDefaults.standard.set(keyID, forKey: Self.keyIDStorageKey)
+        }
+    }
 
     init(
         appAttest: AppAttestProtocol = AppAttest(),
-        backendService: BackendIntegrationService = BackendIntegrationService()
+        backendService: BackendIntegrationService = BackendIntegrationService(),
     ) {
         self.backendService = backendService
         self.appAttest = appAttest
+        self.keyID = UserDefaults.standard.string(forKey: Self.keyIDStorageKey)
     }
 
     func challenge(for keyID: String) async throws -> Data {
@@ -20,30 +29,33 @@ final class AttestationManager: ChallengeProvider {
         return try await backendService.challenge(for: keyID)
     }
 
-    func submitAttestation() async throws {
+    /// Performs attestation once per installed app by reusing a persisted key identifier.
+    @discardableResult
+    func submitAttestation() async throws -> Bool {
+        if keyID != nil {
+            return false
+        }
+
         let attestation = try await appAttest
             .fetchAttestation(challengeProvider: self)
 
         guard let keyID else {
-            fatalError("Attestation must have requested a challenge")
-        }
-        try await backendService.attest(keyID: keyID, attestation)
-    }
-
-    func getAssertion() async throws -> Data {
-        guard let keyID else {
-            fatalError("Key must ready have been attested before it can be asserted")
+            throw Error.missingKeyID
         }
 
-        return try await appAttest.fetchAssertion(
-            keyID: keyID,
-            challenge: challenge(for: keyID)
-        )
+        do {
+            try await backendService.attest(keyID: keyID, attestation)
+            return true
+        } catch {
+            // Clear the generated key if server verification fails so the next try can re-attest cleanly.
+            self.keyID = nil
+            throw error
+        }
     }
 
     func helloWorld() async throws {
         guard let keyID else {
-            fatalError("Key must already have been attested before calling hello-world")
+            throw Error.missingKeyID
         }
 
         let assertion = try await appAttest.fetchAssertion(
@@ -51,5 +63,9 @@ final class AttestationManager: ChallengeProvider {
             challenge: challenge(for: keyID)
         )
         try await backendService.helloWorld(assertion: assertion, keyID: keyID)
+    }
+
+    func resetAttestation() {
+        keyID = nil
     }
 }
