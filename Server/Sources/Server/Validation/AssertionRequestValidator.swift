@@ -35,7 +35,9 @@ struct AssertionRequestValidator: Sendable {
 
         let clientDataHash = Data(SHA256.hash(data: challenge))
         let signedPayload = assertionObject.authenticatorData.rawValue + clientDataHash
-        let key = try P256.Signing.PublicKey(derRepresentation: publicKey)
+
+        // Stored key bytes are an uncompressed P-256 point (x9.63, 65 bytes).
+        let key = try P256.Signing.PublicKey(x963Representation: publicKey)
         let signature = try P256.Signing.ECDSASignature(
             derRepresentation: assertionObject.signature
         )
