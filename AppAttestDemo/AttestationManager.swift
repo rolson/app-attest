@@ -40,4 +40,16 @@ final class AttestationManager: ChallengeProvider {
             challenge: challenge(for: keyID)
         )
     }
+
+    func helloWorld() async throws {
+        guard let keyID else {
+            fatalError("Key must already have been attested before calling hello-world")
+        }
+
+        let assertion = try await appAttest.fetchAssertion(
+            keyID: keyID,
+            challenge: challenge(for: keyID)
+        )
+        try await backendService.helloWorld(assertion: assertion, keyID: keyID)
+    }
 }

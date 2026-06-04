@@ -35,13 +35,21 @@ extension URL {
 }
 
 extension URLRequest {
-    static func helloWorld() throws -> URLRequest {
+    static func helloWorld(assertion: Data, keyID: String) throws -> URLRequest {
         var request = URLRequest(url: .helloWorld)
         request.httpMethod = "GET"
         request.setValue(
             "application/json",
             forHTTPHeaderField: "Content-Type"
         )
+
+        // Send the assertion as a Bearer token expected by server middleware.
+        request.setValue(
+            "Bearer \(assertion.base64EncodedString())",
+            forHTTPHeaderField: "Authorization"
+        )
+        request.setValue(keyID, forHTTPHeaderField: "X-AppAttest-KeyID")
+
         return request
     }
 

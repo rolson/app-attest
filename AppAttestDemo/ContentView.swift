@@ -56,7 +56,7 @@ struct ContentView: View {
     func helloWorld() async {
         status = "calling HW..."
         do {
-            try await BackendIntegrationService().helloWorld()
+            try await attestationManager.helloWorld()
             status = "HW succeeded"
         } catch {
             status = "HW failed: \(error.localizedDescription)"
