@@ -8,10 +8,7 @@ let environment: AttestationEnvironment = .development
 
 func routes(_ app: Application) throws {
     try app.grouped(
-        ClientAttestationMiddleware(
-            appID: appID,
-            environment: environment
-        )
+        ClientAttestationMiddleware(appID: appID)
     ).register(collection: HelloWorldController())
 
     try app.register(collection:

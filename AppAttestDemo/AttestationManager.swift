@@ -1,5 +1,4 @@
 import AppAttest
-import Crypto
 import Foundation
 
 final class AttestationManager: ChallengeProvider {
@@ -60,15 +59,13 @@ final class AttestationManager: ChallengeProvider {
         }
 
         let challengeData = try await challenge(for: keyID)
-        let clientDataHash = Data(SHA256.hash(data: challengeData))
         let assertion = try await appAttest.fetchAssertion(
             keyID: keyID,
             challenge: challengeData
         )
         try await backendService.helloWorld(
             assertion: assertion,
-            keyID: keyID,
-            clientDataHash: clientDataHash
+            keyID: keyID
         )
     }
 

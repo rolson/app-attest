@@ -16,14 +16,12 @@ extension BackendIntegrationService {
 
     func helloWorld(
         assertion: Data,
-        keyID: String,
-        clientDataHash: Data? = nil
+        keyID: String
     ) async throws {
         let (data, response) = try await session
             .data(for: .helloWorld(
                 assertion: assertion,
-                keyID: keyID,
-                clientDataHash: clientDataHash
+                keyID: keyID
             ))
         guard let response = response as? HTTPURLResponse,
               response.statusCode == 200 else {

@@ -1,6 +1,5 @@
 import AttestationDecoding
 import AttestationValidation
-import Crypto
 import Fluent
 import Vapor
 
@@ -8,9 +7,8 @@ import Vapor
 actor ClientAttestationMiddleware: AsyncMiddleware {
     private let validator: AssertionRequestValidator
 
-    init(appID: String, environment: AttestationEnvironment) {
+    init(appID: String) {
         self.validator = AssertionRequestValidator(appID: appID)
-        _ = environment
     }
 
     func respond(to request: Request,
@@ -22,21 +20,6 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
               !assertion.isEmpty
         else {
             request.logger.warning("app-attest unauthorized: missing keyID header or invalid bearer assertion")
-            throw Abort(.unauthorized)
-        }
-
-        let providedAssertionHash = request.headers.first(name: "X-AppAttest-AssertionHash") ?? ""
-        let expectedAssertionHash = Data(SHA256.hash(data: assertion)).base64EncodedString()
-        if !providedAssertionHash.isEmpty,
-           providedAssertionHash != expectedAssertionHash {
-            request.logger.warning(
-                "app-attest unauthorized: assertion hash mismatch",
-                metadata: [
-                    "keyID": .string(keyID),
-                    "providedAssertionHash": .string(providedAssertionHash),
-                    "expectedAssertionHash": .string(expectedAssertionHash)
-                ]
-            )
             throw Abort(.unauthorized)
         }
 
@@ -76,21 +59,6 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
                     throw Abort(.unauthorized)
                 }
 
-                let expectedClientDataHash = Data(SHA256.hash(data: challenge.challenge)).base64EncodedString()
-                let providedClientDataHash = request.headers.first(name: "X-AppAttest-ClientDataHash") ?? ""
-                if !providedClientDataHash.isEmpty,
-                   providedClientDataHash != expectedClientDataHash {
-                    request.logger.warning(
-                        "app-attest unauthorized: clientDataHash mismatch",
-                        metadata: [
-                            "keyID": .string(keyID),
-                            "providedClientDataHash": .string(providedClientDataHash),
-                            "expectedClientDataHash": .string(expectedClientDataHash)
-                        ]
-                    )
-                    throw Abort(.unauthorized)
-                }
-
                 let counter: Int
                 do {
                     counter = try self.validator.validate(
@@ -112,11 +80,7 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
                             "signatureBytes": .stringConvertible(decoded?.signature.count ?? -1),
                             "signCount": .stringConvertible(decoded?.authenticatorData.counter ?? -1),
                             "challengeBytes": .stringConvertible(challenge.challenge.count),
-                            "storedPublicKeyBytes": .stringConvertible(attestedKey.publicKey.count),
-                            "expectedClientDataHash": .string(expectedClientDataHash),
-                            "providedClientDataHash": .string(providedClientDataHash),
-                            "expectedAssertionHash": .string(expectedAssertionHash),
-                            "providedAssertionHash": .string(providedAssertionHash)
+                            "storedPublicKeyBytes": .stringConvertible(attestedKey.publicKey.count)
                         ]
                     )
                     throw Abort(.unauthorized)
