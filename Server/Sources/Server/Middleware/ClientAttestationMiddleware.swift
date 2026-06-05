@@ -1,4 +1,3 @@
-import AttestationDecoding
 import AttestationValidation
 import Fluent
 import Vapor
@@ -69,18 +68,11 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
                         minimumCounter: attestedKey.signCount
                     )
                 } catch {
-                    let decoded = try? AssertionDecoder().decode(data: assertion)
                     request.logger.warning(
                         "app-attest unauthorized: assertion validation failed",
                         metadata: [
                             "keyID": .string(keyID),
-                            "error": .string(String(describing: error)),
-                            "assertionBytes": .stringConvertible(assertion.count),
-                            "authenticatorDataBytes": .stringConvertible(decoded?.authenticatorData.rawValue.count ?? -1),
-                            "signatureBytes": .stringConvertible(decoded?.signature.count ?? -1),
-                            "signCount": .stringConvertible(decoded?.authenticatorData.counter ?? -1),
-                            "challengeBytes": .stringConvertible(challenge.challenge.count),
-                            "storedPublicKeyBytes": .stringConvertible(attestedKey.publicKey.count)
+                            "error": .string(String(describing: error))
                         ]
                     )
                     throw Abort(.unauthorized)

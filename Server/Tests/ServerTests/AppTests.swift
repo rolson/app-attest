@@ -2,7 +2,7 @@
 import XCTVapor
 import Testing
 
-@Suite("App Tests with DB", .serialized)
+@Suite("App Route Tests", .serialized)
 struct AppTests {
     private func withApp(_ test: (Application) async throws -> Void) async throws {
         let app = try await Application.make(.testing)
