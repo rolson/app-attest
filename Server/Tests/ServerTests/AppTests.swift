@@ -2,34 +2,45 @@
 import XCTVapor
 import Testing
 
-@Suite("App Route Tests", .serialized)
+@Suite("App route authorization tests", .serialized)
 struct AppTests {
     private func withApp(_ test: (Application) async throws -> Void) async throws {
         let app = try await Application.make(.testing)
+        var capturedError: Error?
+
         do {
             try await configure(app)
             try await test(app)
         } catch {
-            try await app.asyncShutdown()
-            throw error
+            capturedError = error
         }
+
         try await app.asyncShutdown()
-    }
 
-    @Test("Test Hello World Route requires attestation headers")
-    func helloWorldRequiresAssertion() async throws {
-        try await withApp { app in
-            try await app.test(.GET, "hello-world", headers: ["Authorization": "Bearer test"]) { res async in
-                #expect(res.status == .unauthorized)
-            }
+        if let capturedError {
+            throw capturedError
         }
     }
 
-    @Test("Test Hello World Route without Assertion")
-    func helloWorldUnauthorised() async throws {
+    private func assertHelloWorldUnauthorized(
+        in app: Application,
+        headers: HTTPHeaders = [:]
+    ) async throws {
+        try await app.test(.GET, "hello-world", headers: headers) { res async in
+            #expect(res.status == .unauthorized)
+        }
+    }
+
+    @Test("GET /hello-world returns unauthorized without required attestation headers")
+    func helloWorldRejectsRequestsMissingAttestationHeaders() async throws {
         try await withApp { app in
-            try await app.test(.GET, "hello-world") { res async in
-                #expect(res.status == .unauthorized)
+            let headerVariants: [HTTPHeaders] = [
+                [:],
+                ["Authorization": "Bearer test"],
+            ]
+
+            for headers in headerVariants {
+                try await assertHelloWorldUnauthorized(in: app, headers: headers)
             }
         }
     }
