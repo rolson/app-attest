@@ -34,6 +34,7 @@ struct AppAttestControllerTests {
         do {
             app.databases.use(.sqlite(.memory), as: .sqlite)
             app.migrations.add(CreateAppInstance())
+            app.migrations.add(CreateAttestedKey())
             try app.register(collection: collection)
             try await app.autoMigrate()
             try await test(app)
@@ -75,7 +76,6 @@ struct AppAttestControllerTests {
     @Test("Verifying an assertion from a new device - returns 401 if no challenges")
     func verifyNoChallenge() async throws {
         let keyID = UUID().uuidString
-        let challenge = try IssuedChallengeDTO(keyID: keyID)
         let request = AttestationRequest(
             keyID: keyID,
             attestation: Data()

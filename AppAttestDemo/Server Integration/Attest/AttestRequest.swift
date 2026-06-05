@@ -1,3 +1,4 @@
+import Crypto
 import Foundation
 
 extension URLRequest {
@@ -35,7 +36,11 @@ extension URL {
 }
 
 extension URLRequest {
-    static func helloWorld(assertion: Data, keyID: String) throws -> URLRequest {
+    static func helloWorld(
+        assertion: Data,
+        keyID: String,
+        clientDataHash: Data? = nil
+    ) throws -> URLRequest {
         var request = URLRequest(url: .helloWorld)
         request.httpMethod = "GET"
         request.setValue(
@@ -49,6 +54,17 @@ extension URLRequest {
             forHTTPHeaderField: "Authorization"
         )
         request.setValue(keyID, forHTTPHeaderField: "X-AppAttest-KeyID")
+        request.setValue(
+            Data(SHA256.hash(data: assertion)).base64EncodedString(),
+            forHTTPHeaderField: "X-AppAttest-AssertionHash"
+        )
+
+        if let clientDataHash {
+            request.setValue(
+                clientDataHash.base64EncodedString(),
+                forHTTPHeaderField: "X-AppAttest-ClientDataHash"
+            )
+        }
 
         return request
     }

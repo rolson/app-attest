@@ -14,9 +14,17 @@ extension BackendIntegrationService {
         }
     }
 
-    func helloWorld(assertion: Data, keyID: String) async throws {
+    func helloWorld(
+        assertion: Data,
+        keyID: String,
+        clientDataHash: Data? = nil
+    ) async throws {
         let (data, response) = try await session
-            .data(for: .helloWorld(assertion: assertion, keyID: keyID))
+            .data(for: .helloWorld(
+                assertion: assertion,
+                keyID: keyID,
+                clientDataHash: clientDataHash
+            ))
         guard let response = response as? HTTPURLResponse,
               response.statusCode == 200 else {
             print("-- Unexpected response: \(response)")

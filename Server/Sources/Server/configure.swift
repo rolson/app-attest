@@ -5,8 +5,11 @@ import Vapor
 
 // configures your application
 public func configure(_ app: Application) async throws {
-    
-    app.databases.use(DatabaseConfigurationFactory.sqlite(.file("db.sqlite")), as: .sqlite)
+    let database: DatabaseConfigurationFactory = app.environment == .testing
+        ? .sqlite(.memory)
+        : .sqlite(.file("db.sqlite"))
+
+    app.databases.use(database, as: .sqlite)
     app.migrations.add(CreateAppInstance())
     app.migrations.add(CreateAttestedKey())
     // register routes

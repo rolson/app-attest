@@ -1,5 +1,6 @@
 import AttestationDecoding
 import AttestationValidation
+import Crypto
 import Fluent
 import Vapor
 
@@ -24,12 +25,30 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
             throw Abort(.unauthorized)
         }
 
+        let providedAssertionHash = request.headers.first(name: "X-AppAttest-AssertionHash") ?? ""
+        let expectedAssertionHash = Data(SHA256.hash(data: assertion)).base64EncodedString()
+        if !providedAssertionHash.isEmpty,
+           providedAssertionHash != expectedAssertionHash {
+            request.logger.warning(
+                "app-attest unauthorized: assertion hash mismatch",
+                metadata: [
+                    "keyID": .string(keyID),
+                    "providedAssertionHash": .string(providedAssertionHash),
+                    "expectedAssertionHash": .string(expectedAssertionHash)
+                ]
+            )
+            throw Abort(.unauthorized)
+        }
+
         do {
             try await request.db.transaction { db in
                 guard let attestedKey = try await db.query(AttestedKey.self)
                     .filter(\.$keyID, .equal, keyID)
                     .first() else {
-                    request.logger.warning("app-attest unauthorized: no attested key", metadata: ["keyID": .string(keyID)])
+                    request.logger.warning(
+                        "app-attest unauthorized: no attested key",
+                        metadata: ["keyID": .string(keyID)]
+                    )
                     throw Abort(.unauthorized)
                 }
 
@@ -57,6 +76,21 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
                     throw Abort(.unauthorized)
                 }
 
+                let expectedClientDataHash = Data(SHA256.hash(data: challenge.challenge)).base64EncodedString()
+                let providedClientDataHash = request.headers.first(name: "X-AppAttest-ClientDataHash") ?? ""
+                if !providedClientDataHash.isEmpty,
+                   providedClientDataHash != expectedClientDataHash {
+                    request.logger.warning(
+                        "app-attest unauthorized: clientDataHash mismatch",
+                        metadata: [
+                            "keyID": .string(keyID),
+                            "providedClientDataHash": .string(providedClientDataHash),
+                            "expectedClientDataHash": .string(expectedClientDataHash)
+                        ]
+                    )
+                    throw Abort(.unauthorized)
+                }
+
                 let counter: Int
                 do {
                     counter = try self.validator.validate(
@@ -78,7 +112,11 @@ actor ClientAttestationMiddleware: AsyncMiddleware {
                             "signatureBytes": .stringConvertible(decoded?.signature.count ?? -1),
                             "signCount": .stringConvertible(decoded?.authenticatorData.counter ?? -1),
                             "challengeBytes": .stringConvertible(challenge.challenge.count),
-                            "storedPublicKeyBytes": .stringConvertible(attestedKey.publicKey.count)
+                            "storedPublicKeyBytes": .stringConvertible(attestedKey.publicKey.count),
+                            "expectedClientDataHash": .string(expectedClientDataHash),
+                            "providedClientDataHash": .string(providedClientDataHash),
+                            "expectedAssertionHash": .string(expectedAssertionHash),
+                            "providedAssertionHash": .string(providedAssertionHash)
                         ]
                     )
                     throw Abort(.unauthorized)
