@@ -41,21 +41,17 @@ public final class AppAttest: AppAttestProtocol {
         return attestation
     }
 
-    private func fetchAssertion(keyID: String, challenge: Data) async throws -> Data {
-        let clientDataHash = Data(SHA256.hash(data: challenge))
-        return try await service.generateAssertion(
-            keyID,
-            clientDataHash: clientDataHash
-        )
-    }
-
     public func fetchAssertion(challengeProvider: ChallengeProvider) async throws -> (keyID: String, assertion: Data) {
         guard let keyID = keyID else {
             throw AppAttestError.missingKeyID
         }
 
         let challenge = try await challengeProvider.challenge(for: keyID)
-        let assertion = try await fetchAssertion(keyID: keyID, challenge: challenge)
+        let clientDataHash = Data(SHA256.hash(data: challenge))
+        let assertion = try await service.generateAssertion(
+            keyID,
+            clientDataHash: clientDataHash
+        )
         return (keyID: keyID, assertion: assertion)
     }
 
