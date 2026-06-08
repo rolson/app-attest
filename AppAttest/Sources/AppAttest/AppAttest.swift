@@ -1,12 +1,15 @@
 import Crypto
 import DeviceCheck
+import Foundation
 
 enum AppAttestError: Error {
     case unsupportedDevice
+    case missingKeyID
 }
 
 public final class AppAttest: AppAttestProtocol {
     let service: AttestationService
+    private static let keyIDStorageKey = "appattest.keyID"
 
     init(
         service: AttestationService
@@ -24,21 +27,43 @@ public final class AppAttest: AppAttestProtocol {
         guard service.isSupported else {
             throw AppAttestError.unsupportedDevice
         }
+
         let keyID = try await service.generateKey()
         let challenge = try await challengeProvider.challenge(for: keyID)
         let clientDataHash = Data(SHA256.hash(data: challenge))
 
-        return try await service.attestKey(
+        let attestation = try await service.attestKey(
             keyID,
             clientDataHash: clientDataHash
         )
+
+        UserDefaults.standard.set(keyID, forKey: Self.keyIDStorageKey)
+        return attestation
     }
 
-    public func fetchAssertion(keyID: String, challenge: Data) async throws -> Data {
+    private func fetchAssertion(keyID: String, challenge: Data) async throws -> Data {
         let clientDataHash = Data(SHA256.hash(data: challenge))
         return try await service.generateAssertion(
             keyID,
             clientDataHash: clientDataHash
         )
+    }
+
+    public func fetchAssertion(challengeProvider: ChallengeProvider) async throws -> (keyID: String, assertion: Data) {
+        guard let keyID = keyID else {
+            throw AppAttestError.missingKeyID
+        }
+
+        let challenge = try await challengeProvider.challenge(for: keyID)
+        let assertion = try await fetchAssertion(keyID: keyID, challenge: challenge)
+        return (keyID: keyID, assertion: assertion)
+    }
+
+    public var keyID: String? {
+        UserDefaults.standard.string(forKey: Self.keyIDStorageKey)
+    }
+
+    public func resetKeyID() {
+        UserDefaults.standard.removeObject(forKey: Self.keyIDStorageKey)
     }
 }

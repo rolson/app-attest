@@ -2,7 +2,7 @@ import Foundation
 
 extension BackendIntegrationService {
     func attest(keyID: String, _ attestation: Data) async throws {
-        let (data, response) = try await session
+        let (_, response) = try await session
             .data(for: .attest(
                 keyID: keyID,
                 attestation: attestation
@@ -18,7 +18,7 @@ extension BackendIntegrationService {
         assertion: Data,
         keyID: String
     ) async throws {
-        let (data, response) = try await session
+        let (_, response) = try await session
             .data(for: .helloWorld(
                 assertion: assertion,
                 keyID: keyID

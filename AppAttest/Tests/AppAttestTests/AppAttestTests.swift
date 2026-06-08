@@ -10,7 +10,7 @@ struct AppAttestTests {
 
     init() {
         sut = AppAttest(
-            attestationProvider: attestationProvider
+            service: attestationProvider
         )
     }
 

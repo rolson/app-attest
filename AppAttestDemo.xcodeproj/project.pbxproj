@@ -213,6 +213,7 @@
             mainGroup = A779B9392CC6EDFC008128F4;
             minimizedProjectReferenceProxies = 1;
             packageReferences = (
+                    A7C5BCE72F9D4A1100E8E001 /* XCLocalSwiftPackageReference "AppAttest" */,
                 A75218732E92C2D700ABF476 /* XCRemoteSwiftPackageReference "swift-crypto" */,
             );
             preferredProjectObjectVersion = 77;
@@ -630,6 +631,13 @@
         };
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+    A7C5BCE72F9D4A1100E8E001 /* XCLocalSwiftPackageReference "AppAttest" */ = {
+      isa = XCLocalSwiftPackageReference;
+      relativePath = AppAttest;
+    };
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
         A75218732E92C2D700ABF476 /* XCRemoteSwiftPackageReference "swift-crypto" */ = {
             isa = XCRemoteSwiftPackageReference;
@@ -649,6 +657,7 @@
         };
         A75E230F2CC6F59800B03953 /* AppAttest */ = {
             isa = XCSwiftPackageProductDependency;
+              package = A7C5BCE72F9D4A1100E8E001 /* XCLocalSwiftPackageReference "AppAttest" */;
             productName = AppAttest;
         };
 /* End XCSwiftPackageProductDependency section */
